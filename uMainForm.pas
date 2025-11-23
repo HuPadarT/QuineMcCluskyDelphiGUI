@@ -31,7 +31,6 @@ type
     procedure VM_ResultChanged(Sender: TObject);
     procedure VM_BusyChanged(Sender: TObject; const Value: Boolean);
     procedure BindViewToVM;
-    procedure RefreshLog;
   public
   end;
 
@@ -106,11 +105,6 @@ begin
   FViewModel.OnBusyChanged := VM_BusyChanged;
 
   BindViewToVM;
-end;
-
-procedure TMainForm.RefreshLog;
-begin
-  memSteps.Lines := FViewModel.Steps;
 end;
 
 procedure TMainForm.VM_BusyChanged(Sender: TObject; const Value: Boolean);
