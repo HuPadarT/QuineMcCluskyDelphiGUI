@@ -8,6 +8,8 @@ uses
 type
   TQMService = class(TInterfacedObject, IQMInterface)
   private
+    FAndSign: string;
+    FOrSign: string;
     procedure Log(Steps: TStrings; const Msg: string);
     function DiffPos(const A, B: string): Integer;
     function PatternToLiteral(const Pattern: string): string;
@@ -17,6 +19,8 @@ type
   public
     procedure Compute(const Minterms, DontCares: TArray<Integer>; VariableCount: Integer;
       Steps: TStrings; out ResultExpr: string);
+    procedure Init(AAndSign, AOrSign: string);
+
   end;
 
 implementation
@@ -75,7 +79,7 @@ begin
     if pList.Count = 0 then
       Exit('1');
     parts := pList.ToArray;
-    Result := string.Join(' & ', parts);
+    Result := string.Join(' ' + FAndSign + ' ', parts);
   finally
     pList.Free;
   end;
@@ -173,6 +177,12 @@ begin
     primeSet.Free;
     seen.Free;
   end;
+end;
+
+procedure TQMService.Init(AAndSign, AOrSign: string);
+begin
+  FAndSign := AAndSign;
+  FOrSign := AOrSign;
 end;
 
 procedure TQMService.Compute(const Minterms, DontCares: TArray<Integer>;
@@ -346,9 +356,12 @@ begin
                 // kifejezés készítése
                 exprParts := TList<string>.Create;
                 try
-                  for idx in selected do
+                  for I := selected.Count - 1 downto 0 do
+                  begin
+                    idx := selected[I];
                     exprParts.Add(PatternToLiteral(primeImplicants[idx]));
-                  ResultExpr := string.Join(' | ', exprParts.ToArray);
+                  end;
+                  ResultExpr := string.Join(' ' + FOrSign + ' ', exprParts.ToArray);
                   Log(Steps, 'Végső kiválasztás: ' + ResultExpr);
                 finally
                   exprParts.Free;

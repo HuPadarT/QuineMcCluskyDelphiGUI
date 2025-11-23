@@ -19,6 +19,10 @@ type
     lblResult: TLabel;
     edtResult: TEdit;
     StatusBar1: TStatusBar;
+    lblAndSign: TLabel;
+    edtAndSign: TEdit;
+    lblOrSign: TLabel;
+    edtOrSign: TEdit;
     procedure FormCreate(Sender: TObject);
     procedure btnRunClick(Sender: TObject);
     procedure edtMintermsChange(Sender: TObject);
@@ -65,6 +69,12 @@ begin
       ShowMessage('A változók száma túl nagy!');
       Exit;
     end;
+
+    if Trim(edtAndSign.Text) <> '' then
+      FViewModel.AndSign := edtAndSign.Text;
+
+    if Trim(edtOrSign.Text) <> '' then
+      FViewModel.OrSign := edtOrSign.Text;
 
     FViewModel.RunAsync;
 

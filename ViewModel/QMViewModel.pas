@@ -24,6 +24,8 @@ type
     FVarCount: Integer;
     FSteps: TStringList;
     FResult: string;
+    FAndSign: string;
+    FOrSign: string;
     FIsBusy: Boolean;
     FOnStepsChanged: TNotifyEvent;
     FOnResultChanged: TNotifyEvent;
@@ -46,6 +48,8 @@ type
     property OnStepsChanged: TNotifyEvent read FOnStepsChanged write FOnStepsChanged;
     property OnResultChanged: TNotifyEvent read FOnResultChanged write FOnResultChanged;
     property OnBusyChanged: TNotifyBoolEvent read FOnBusyChanged write FOnBusyChanged;
+    property AndSign: string read FAndSign write FAndSign;
+    property OrSign: string read FOrSign write FOrSign;
 
     procedure RunAsync;
   end;
@@ -160,6 +164,13 @@ begin
     Exit;
   ParseInts(FMintermsText, mins);
   ParseInts(FDontCaresText, dcs);
+
+  if Length(FAndSign) <> 1 then
+    FAndSign := '&';
+  if Length(FOrSign) <> 1 then
+    FOrSign := '|';
+
+  FService.Init(FAndSign, FOrSign);
 
   SetBusy(True);
 
