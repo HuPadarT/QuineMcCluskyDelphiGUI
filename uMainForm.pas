@@ -3,7 +3,7 @@
 interface
 
 uses
-  Vcl.Forms, Vcl.Dialogs, Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls, System.Classes, System.SysUtils, QMModel, QMViewModel, QM.Service;
+  Vcl.Forms, Vcl.Dialogs, Vcl.Controls, Vcl.StdCtrls, Vcl.ExtCtrls, System.Classes, System.SysUtils, QMModel, QMViewModel, QM.Service, Vcl.ComCtrls;
 
 type
   TMainForm = class(TForm)
@@ -18,6 +18,7 @@ type
     memSteps: TMemo;
     lblResult: TLabel;
     edtResult: TEdit;
+    StatusBar1: TStatusBar;
     procedure FormCreate(Sender: TObject);
     procedure btnRunClick(Sender: TObject);
     procedure edtMintermsChange(Sender: TObject);
@@ -30,6 +31,7 @@ type
     procedure VM_ResultChanged(Sender: TObject);
     procedure VM_BusyChanged(Sender: TObject; const Value: Boolean);
     procedure BindViewToVM;
+    procedure RefreshLog;
   public
   end;
 
@@ -53,10 +55,23 @@ end;
 procedure TMainForm.btnRunClick(Sender: TObject);
 begin
   try
+    if FViewModel.VarCount < 3 then
+    begin
+      ShowMessage('A változók száma túl kicsi!');
+      Exit;
+    end;
+
+    if FViewModel.VarCount > 5 then
+    begin
+      ShowMessage('A változók száma túl nagy!');
+      Exit;
+    end;
+
     FViewModel.RunAsync;
+
   except
     on E: Exception do
-      ShowMessage('Error: ' + E.Message);
+      ShowMessage('Hiba: ' + E.Message);
   end;
 end;
 
@@ -73,12 +88,6 @@ end;
 procedure TMainForm.edtVarsChange(Sender: TObject);
 begin
   FViewModel.VarCount := StrToIntDef(edtVars.Text, FViewModel.VarCount);
-  if FViewModel.VarCount > 5 then
-  begin
-    FViewModel.VarCount := 5;
-    edtVars.Text := '5';
-    ShowMessage('A változók száma túl nagy, csökkentve lett 5-re!');
-  end;
 end;
 
 procedure TMainForm.FormCreate(Sender: TObject);
@@ -87,9 +96,9 @@ begin
   FViewModel := TQMViewModel.Create(FService);
 
   // alapértelmezett értékek, hogy ne legyen üres
-  FViewModel.MintermsText := '0,1,2,5,6,7,8,9,10,14';
+  FViewModel.MintermsText := '1,3,12,13,14,15,17,19,28,29,30,31';
   FViewModel.DontCaresText := '2,9,14'; // lehet üres
-  FViewModel.VarCount := 4;
+  FViewModel.VarCount := 5;
 
   // feliratkozás a viewmodell eseményeire
   FViewModel.OnStepsChanged := VM_StepsChanged;
@@ -97,6 +106,11 @@ begin
   FViewModel.OnBusyChanged := VM_BusyChanged;
 
   BindViewToVM;
+end;
+
+procedure TMainForm.RefreshLog;
+begin
+  memSteps.Lines := FViewModel.Steps;
 end;
 
 procedure TMainForm.VM_BusyChanged(Sender: TObject; const Value: Boolean);

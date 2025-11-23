@@ -8,7 +8,6 @@ uses
 type
   TQMService = class(TInterfacedObject, IQMInterface)
   private
-    FSteps: TStringList;
     procedure Log(Steps: TStrings; const Msg: string);
     function DiffPos(const A, B: string): Integer;
     function PatternToLiteral(const Pattern: string): string;
@@ -16,11 +15,8 @@ type
       VariableCount: Integer; Steps: TStrings; out PrimeImplicants: TList<string>;
       out PrimeCovers: TList<TArray<Integer>>);
   public
-    constructor Create(Service: IQMInterface);
-    destructor Destroy; override;
-
-    procedure Compute(const Minterms, DontCares: TArray<Integer>; VariableCount: Integer; out ResultExpr: string);
-    property Steps: TStringList read FSteps;
+    procedure Compute(const Minterms, DontCares: TArray<Integer>; VariableCount: Integer;
+      Steps: TStrings; out ResultExpr: string);
   end;
 
 implementation
@@ -33,18 +29,6 @@ procedure TQMService.Log(Steps: TStrings; const Msg: string);
 begin
   if Assigned(Steps) then
     Steps.Add(Msg);
-end;
-
-constructor TQMService.Create(Service: IQMInterface);
-begin
-  FSteps := TStringList.Create;
-end;
-
-destructor TQMService.Destroy;
-begin
-  if Assigned(FSteps) then
-    FSteps.Free;
-  inherited;
 end;
 
 function TQMService.DiffPos(const A, B: string): Integer;
@@ -168,7 +152,7 @@ begin
         if not used[i] then
         begin
           primeSet.Add(current[i]);
-          Log(Steps, '  Prím: ' + current[i].Pattern);
+          Log(Steps, '  Prím implikáns: ' + current[i].Pattern);
         end;
 
       if nextList.Count = 0 then  // kilép ha mindet feldolgoztuk
@@ -191,7 +175,8 @@ begin
   end;
 end;
 
-procedure TQMService.Compute(const Minterms, DontCares: TArray<Integer>; VariableCount: Integer; out ResultExpr: string);
+procedure TQMService.Compute(const Minterms, DontCares: TArray<Integer>;
+  VariableCount: Integer; Steps: TStrings; out ResultExpr: string);
 var
   all: TList<string>;
   i, v: Integer;
@@ -213,16 +198,12 @@ begin
   try
     for i := 0 to Length(Minterms) - 1 do
       all.Add(IntToStr(Minterms[i]));
-    for i := 0 to Length(DontCares) - 1 do
-      all.Add(IntToStr(DontCares[i]));
     Log(Steps, 'Bemenet: Mintermek = [' + string.Join(',', all.ToArray) + '] Változók száma=' + IntToStr(VariableCount));
 
     // mindegyik mintermnek elkészítjük a bináris képét
     all.Clear;
     for i := 0 to Length(Minterms) - 1 do
       all.Add(TStaticHelper.ToBinary(Minterms[i], VariableCount));
-    for i := 0 to Length(DontCares) - 1 do
-      all.Add(TStaticHelper.ToBinary(DontCares[i], VariableCount));
     Log(Steps, 'Bináris formák: ' + string.Join(',', all.ToArray));
 
     // prím implikánsok generálásának előkészítése logolással
@@ -264,8 +245,6 @@ begin
             if chart[v].Count = 1 then
               essentialIdx.Add(chart[v][0]);
 
-          Log(Steps, 'Nélkülözhetetlen prím implikánsok: ' + IfThen(essentialIdx.Count = 0, 'nincs', IntToStr(essentialIdx[0])));
-
           covered := TDictionary<Integer, Boolean>.Create;
           try
             for i := 0 to essentialIdx.Count - 1 do
@@ -289,21 +268,6 @@ begin
               end;
             end;
 
-            // ha mind megvan, akkor az eredmény készítése
-            if covered.Count = minset.Count then
-            begin
-              exprParts := TList<string>.Create;
-              try
-                for idx in essentialIdx do
-                  exprParts.Add(PatternToLiteral(primeImplicants[idx]));
-                ResultExpr := string.Join(' | ', exprParts.ToArray);
-                Log(Steps, 'Minden minterm lefedett. Result: ' + ResultExpr);
-                Exit;
-              finally
-                exprParts.Free;
-              end;
-            end;
-
             // Maradék mintermek és minimális lefedettség egyszerű algoritmussal (az olvashatóság érdekében)
             remaining := TList<Integer>.Create;
             try
@@ -311,6 +275,8 @@ begin
                 if not covered.ContainsKey(v) then
                   remaining.Add(v);
               var s := TStaticHelper.IntArrayToStr(',', remaining.ToArray);
+              if s = '' then
+                s := 'nincs maradék.';
               Log(Steps, 'Hátralévő mintermek: ' + s);
 
               // Kiválasztjuk az implikánst, amely a legtöbb maradékot lefedi.

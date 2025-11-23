@@ -155,8 +155,6 @@ end;
 procedure TQMViewModel.RunAsync;
 var
   mins, dcs: TArray<Integer>;
-  resultExprLocal: string;
-  stepsLocal: TStringList;
 begin
   if FIsBusy then
     Exit;
@@ -165,12 +163,15 @@ begin
 
   SetBusy(True);
 
-  try
-  // a folyamat futtatása a háttérben, szálkezeléssel
   TTask.Run(
     procedure
+    var
+      stepsLocal: TStringList;
+      resultExprLocal: string;
     begin
       stepsLocal := TStringList.Create;
+      resultExprLocal := '';
+
       try
         try
           FService.Compute(mins, dcs, FVarCount, stepsLocal, resultExprLocal);
@@ -185,25 +186,24 @@ begin
         TThread.Queue(nil,
           procedure
           begin
-            FSteps.Assign(stepsLocal);
-            FResult := resultExprLocal;
-            if Assigned(FOnStepsChanged) then
-              FOnStepsChanged(Self);
-            if Assigned(FOnResultChanged) then
-              FOnResultChanged(Self);
-            SetBusy(False);
+            try
+              FSteps.Assign(stepsLocal);
+              FResult := resultExprLocal;
+
+              if Assigned(FOnStepsChanged) then
+                FOnStepsChanged(Self);
+              if Assigned(FOnResultChanged) then
+                FOnResultChanged(Self);
+            finally
+              stepsLocal.Free;
+              SetBusy(False);
+            end;
           end);
       finally
-        stepsLocal.Free;
+        // Csak ha más erőforrás van, ami feltétlenül igényli a felszabadítást, maradjon itt.
+        // stepsLocal.Free már itt NEM kell!
       end;
     end);
-  except
-    on E: Exception do
-    begin
-      stepsLocal.Add('Hiba: ' + E.Message);
-      resultExprLocal := '';
-    end;
-  end;
 end;
 
 end.
