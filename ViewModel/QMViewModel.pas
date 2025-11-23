@@ -18,7 +18,7 @@ type
 
   TQMViewModel = class
   private
-    FService: IQMService;
+    FService: IQMInterface;
     FMintermsText: string;
     FDontCaresText: string;
     FVarCount: Integer;
@@ -34,7 +34,7 @@ type
     procedure SetBusy(const Value: Boolean);
     procedure ParseInts(const Text: string; out Arr: TArray<Integer>);
   public
-    constructor Create(Service: IQMService);
+    constructor Create(Service: IQMInterface);
     destructor Destroy; override;
 
     property MintermsText: string read FMintermsText write SetMintermsText;
@@ -72,7 +72,7 @@ end;
 
 { TQMViewModel }
 
-constructor TQMViewModel.Create(Service: IQMService);
+constructor TQMViewModel.Create(Service: IQMInterface);
 begin
   inherited Create;
   FService := Service;
@@ -94,22 +94,28 @@ var
   tmp: TList<Integer>;
   tmpValue: Integer;
 begin
-  parts := Text.Split([',',';',' '], TStringSplitOptions.ExcludeEmpty);
-  tmp := TList<Integer>.Create;
-  try
-    for var I := 0 to High(parts) do
-    begin
-      p := Trim(parts[I]);
-      if p = '' then Continue;
-      if TryStrToInt(p, tmpValue) then
-        tmp.Add(tmpValue)
-      else
-        raise Exception.CreateFmt('Nem érvényes egész szám: %s', [p]);
+  if trim(Text) <> '' then
+  begin
+    parts := Text.Split([',',';',' '], TStringSplitOptions.ExcludeEmpty);
+    SetLength(Arr, Length(parts));
+    tmp := TList<Integer>.Create;
+    try
+      for var I := 0 to High(parts) do
+      begin
+        p := Trim(parts[I]);
+        if p = '' then Continue;
+        if TryStrToInt(p, tmpValue) then
+          tmp.Add(tmpValue)
+        else
+          raise Exception.CreateFmt('Nem érvényes egész szám: %s', [p]);
+      end;
+      Arr := tmp.ToArray;
+    finally
+      tmp.Free;
     end;
-    Arr := tmp.ToArray;
-  finally
-    tmp.Free;
-  end;
+    end
+  else
+    SetLength(Arr, 0);
 end;
 
 procedure TQMViewModel.SetBusy(const Value: Boolean);
@@ -159,6 +165,7 @@ begin
 
   SetBusy(True);
 
+  try
   // a folyamat futtatása a háttérben, szálkezeléssel
   TTask.Run(
     procedure
@@ -190,6 +197,13 @@ begin
         stepsLocal.Free;
       end;
     end);
+  except
+    on E: Exception do
+    begin
+      stepsLocal.Add('Hiba: ' + E.Message);
+      resultExprLocal := '';
+    end;
+  end;
 end;
 
 end.

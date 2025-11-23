@@ -25,7 +25,7 @@ type
     procedure edtVarsChange(Sender: TObject);
   private
     FViewModel: TQMViewModel;
-    FService: IQMService;
+    FService: IQMInterface;
     procedure VM_StepsChanged(Sender: TObject);
     procedure VM_ResultChanged(Sender: TObject);
     procedure VM_BusyChanged(Sender: TObject; const Value: Boolean);

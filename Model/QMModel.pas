@@ -6,8 +6,9 @@ uses
   System.SysUtils, System.Classes, System.Generics.Collections, QM.Service;
 
 type
-  TQMService = class(TInterfacedObject, IQMService)
+  TQMService = class(TInterfacedObject, IQMInterface)
   private
+    FSteps: TStringList;
     procedure Log(Steps: TStrings; const Msg: string);
     function DiffPos(const A, B: string): Integer;
     function PatternToLiteral(const Pattern: string): string;
@@ -15,8 +16,11 @@ type
       VariableCount: Integer; Steps: TStrings; out PrimeImplicants: TList<string>;
       out PrimeCovers: TList<TArray<Integer>>);
   public
-    procedure Compute(const Minterms, DontCares: TArray<Integer>; VariableCount: Integer;
-      Steps: TStrings; out ResultExpr: string);
+    constructor Create(Service: IQMInterface);
+    destructor Destroy; override;
+
+    procedure Compute(const Minterms, DontCares: TArray<Integer>; VariableCount: Integer; out ResultExpr: string);
+    property Steps: TStringList read FSteps;
   end;
 
 implementation
@@ -29,6 +33,18 @@ procedure TQMService.Log(Steps: TStrings; const Msg: string);
 begin
   if Assigned(Steps) then
     Steps.Add(Msg);
+end;
+
+constructor TQMService.Create(Service: IQMInterface);
+begin
+  FSteps := TStringList.Create;
+end;
+
+destructor TQMService.Destroy;
+begin
+  if Assigned(FSteps) then
+    FSteps.Free;
+  inherited;
 end;
 
 function TQMService.DiffPos(const A, B: string): Integer;
@@ -110,11 +126,11 @@ begin
       s := AllTerms[i];
       t1.Pattern := s;
       SetLength(t1.Mins, 1);
-      t1.Mins[0] := StrToInt(s); // caller will have numeric string representing minterm
+      t1.Mins[0] := StrToInt(s);
       current.Add(t1);
     end;
 
-    Log(Steps, 'Prime implicant generation:');
+    Log(Steps, 'Prím implikánsok generálása:');
     while True do
     begin
       nextList := TList<TTerm>.Create;
@@ -140,7 +156,7 @@ begin
             begin
               seen.Add(merged.Pattern, nextList.Count);
               nextList.Add(merged);
-              Log(Steps, Format('  Combine %s + %s -> %s', [current[i].Pattern, current[j].Pattern, merged.Pattern]));
+              Log(Steps, Format('  Kombináció %s + %s -> %s', [current[i].Pattern, current[j].Pattern, merged.Pattern]));
             end;
             used[i] := True;
             used[j] := True;
@@ -152,7 +168,7 @@ begin
         if not used[i] then
         begin
           primeSet.Add(current[i]);
-          Log(Steps, '  Prime: ' + current[i].Pattern);
+          Log(Steps, '  Prím: ' + current[i].Pattern);
         end;
 
       if nextList.Count = 0 then  // kilép ha mindet feldolgoztuk
@@ -175,8 +191,7 @@ begin
   end;
 end;
 
-procedure TQMService.Compute(const Minterms, DontCares: TArray<Integer>;
-  VariableCount: Integer; Steps: TStrings; out ResultExpr: string);
+procedure TQMService.Compute(const Minterms, DontCares: TArray<Integer>; VariableCount: Integer; out ResultExpr: string);
 var
   all: TList<string>;
   i, v: Integer;
@@ -282,7 +297,7 @@ begin
                 for idx in essentialIdx do
                   exprParts.Add(PatternToLiteral(primeImplicants[idx]));
                 ResultExpr := string.Join(' | ', exprParts.ToArray);
-                Log(Steps, 'All minterms covered by essentials. Result: ' + ResultExpr);
+                Log(Steps, 'Minden minterm lefedett. Result: ' + ResultExpr);
                 Exit;
               finally
                 exprParts.Free;
@@ -296,7 +311,7 @@ begin
                 if not covered.ContainsKey(v) then
                   remaining.Add(v);
               var s := TStaticHelper.IntArrayToStr(',', remaining.ToArray);
-              Log(Steps, 'Remaining minterms: ' + s);
+              Log(Steps, 'Hátralévő mintermek: ' + s);
 
               // Kiválasztjuk az implikánst, amely a legtöbb maradékot lefedi.
               var selected := TList<Integer>.Create;
